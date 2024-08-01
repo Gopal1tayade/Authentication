@@ -1,17 +1,16 @@
 const Student = require("../Models/Student");
 const studentLogin = require("../Models/studentLogin");
 const studentSignUp = require("../Models/studentSignup");
+const user = require("../Models/user");
 const sendOtpEmail = require("./mailer");
-const { setStudent } = require("../service/authenticate");
+const { setStudent,setgoogleStudent } = require("../service/authenticate");
 
 async function handleGetAllusers(req, res) {
-  const students = await studentSignUp.find({});
+  const students = await Student.find({});
   return res.json(students);
 }
 
-
-const handleRegisterStudent = async (req, res) => {
-  // sginup the student and verify its email
+const handleRegisterStudent = async (req, res) => {      // sginup the student and verify its email
   try {
     const { firstName, lastName, email, password, confiremPassword } = req.body;
     if (password !== confiremPassword) {
@@ -37,9 +36,6 @@ const handleRegisterStudent = async (req, res) => {
   }
 };
 
-
-
-
 const verifyOtp = async (req, res) => {
   // check the opt for the student mail verification
   try {
@@ -61,76 +57,150 @@ const verifyOtp = async (req, res) => {
   }
 };
 
-
-
-const handleStudentLogin = async (req, res) => {
-  // handler for student login
-
+const handleStudentLogin = async (req, res) => { // for student login
   try {
-    const { email, password } = req.body;
-    const student = await studentLogin.findOne({ email });
+    if (req.user) {
+      const googleUser = req.user;
+      const googleId = googleUser.googleId;
+      const student = await user.findOne({ googleId });
+      const token = setgoogleStudent(student);
 
-    if (!student) return res.status(400).json({ message: "Student not found.....! Please Register first" });
-    const isMatch = password === student.password;
+      return res.status(200).json({ token, student });
 
-    if (!isMatch)
-      return res.status(400).json({ message: "Invalid Credential" });
-    const token = setStudent(student);
+    } else {
+      const { email, password } = req.body;
+      console.log(email, password);
+      const student = await studentLogin.findOne({ email });
 
-    return res.status(200).json({token ,student });
+      if (!student)
+        return res
+          .status(400)
+          .json({ message: "Student not found.....! Please Register first" });
+      const isMatch = password === student.password;
+
+      if (!isMatch)
+        return res.status(400).json({ message: "Invalid Credential" });
+      const token = setStudent(student);
+
+      return res.status(200).json({ token, student });
+    }
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 };
-
-
 
 const handleStudneAccount = async (req, res) => {
   try {
-    
-    const email = req.user.email;
-    const signupStudent = await studentSignUp.findOne({ email });
-    firstName = signupStudent.firstName;
-    lastName = signupStudent.lastName;
-    isVerified = req.user.isVerified;
-    const {
-      rollNumber,
-      profilePicture,
-      userName,
-      mobileNumber,
-      address,
-      majorSubject,
-      dateOfBirth,
-      gender,
-      language,
-      profileVisibility,
-    } = req.body;
-    const fullDetail = new Student({
-      rollNumber,
-      firstName,
-      lastName,
-      email,
-      profilePicture,
-      userName,
-      mobileNumber,
-      address,
-      majorSubject,
-      dateOfBirth,
-      gender,
-      language,
-      profileVisibility,
-      isVerified,
-    });
+    if (req.user.googleId) {
+      googleId = req.user.googleId;
+      const useNew = await user.findOne({googleId});
+      const fullName = useNew.displayName.split(' ');
+      firstName = fullName[0];
+      lastName = fullName[1];
+      email = useNew.email;
+      let {
+        rollNumber,
+        profilePicture,
+        userName,
+        mobileNumber,
+        address,
+        majorSubject,
+        dateOfBirth,
+        gender,
+        language,
+        profileVisibility,
+      } = req.body;
+      profilePicture = useNew.profilePhoto;
+      isVerified = true;
+      const fullDetail = new Student({
+        rollNumber,
+        firstName,
+        lastName,
+        email,
+        profilePicture,
+        userName,
+        mobileNumber,
+        address,
+        majorSubject,
+        dateOfBirth,
+        gender,
+        language,
+        profileVisibility,
+        isVerified,
+      });
 
-    await fullDetail.save();
+      await fullDetail.save();
 
-    return res
-      .status(201)
-      .json({ message: "All the information is submitted sucessfully" });
+      return res
+        .status(201)
+        .json({ message: "All the information is submitted sucessfully" });
+    }
+     else {
+      const email = req.user.email;
+      const signupStudent = await studentSignUp.findOne({ email });
+      firstName = signupStudent.firstName;
+      lastName = signupStudent.lastName;
+      isVerified = true;
+      const {
+        rollNumber,
+        profilePicture,
+        userName,
+        mobileNumber,
+        address,
+        majorSubject,
+        dateOfBirth,
+        gender,
+        language,
+        profileVisibility,
+      } = req.body;
+      const fullDetail = new Student({
+        rollNumber,
+        firstName,
+        lastName,
+        email,
+        profilePicture,
+        userName,
+        mobileNumber,
+        address,
+        majorSubject,
+        dateOfBirth,
+        gender,
+        language,
+        profileVisibility,
+        isVerified,
+      });
+
+      await fullDetail.save();
+
+      return res
+        .status(201)
+        .json({ message: "All the information is submitted sucessfully" });
+    }
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message  });
   }
 };
+
+const handleLogOut = (req , res) =>{   // for student logout
+
+  try {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ message: 'Logout failed', error: err });
+      }
+      req.session.destroy((err) => {
+        if (err) {
+          return res.status(500).json({ message: 'Failed to destroy session', error: err });
+        }
+        res.clearCookie('connect.sid', { path: '/' });
+        return res.status(200).json({ message: 'Logout successful' });
+      });
+    });
+  } catch (error) {
+    return res.status(500).json({error:error.message});
+  }
+
+}
 
 module.exports = {
   handleGetAllusers,
@@ -138,6 +208,6 @@ module.exports = {
   verifyOtp,
   handleStudentLogin,
   handleStudneAccount,
+  handleLogOut,
 };
 
-// rollNumber ,firstName ,lastName ,email ,password , profilePicture,userName,mobileNumber,address ,majorSubject , dateOfBirth ,gender,language,profileVisibility ,otp ,isVerified

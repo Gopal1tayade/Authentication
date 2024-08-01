@@ -10,6 +10,14 @@ function setStudent(student){
 
 }
 
+function setgoogleStudent(student){
+    return JWT.sign({
+        id:student._id,
+        googleId:student.googleId,
+        email: student.email,
+    } , secret,{ expiresIn: '1h' });
+
+}
 
 function getStudent(token){
     if(!token) return null ;
@@ -19,5 +27,6 @@ function getStudent(token){
 
 module.exports ={
     setStudent,
-    getStudent
+    getStudent,
+    setgoogleStudent,
 }
