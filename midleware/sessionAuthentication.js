@@ -11,7 +11,7 @@ const auth = (req, res, next) => {
   try {
     
     const decoded = getStudent(token);
-    
+      console.log(decoded);
 
     if (!decoded) {
       throw new Error('Token is not valid');

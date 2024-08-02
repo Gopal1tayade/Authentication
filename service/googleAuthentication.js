@@ -6,6 +6,7 @@ const {handleStudentLogin ,handleLogOut}=require("../Controller/Student");
 const {googleAuth} = require("../midleware/googleAuth");
 require("dotenv").config();
 const User = require("../Models/user");
+const {auth} = require("../midleware/sessionAuthentication");
 
 
 
@@ -55,7 +56,7 @@ passport.serializeUser((user, done) => {
 
   googleroutes.route('/google/auth/callback').get(googleAuth , handleStudentLogin);
 
-  googleroutes.route('/logout').get(handleLogOut);
+  googleroutes.route('/logout').get(auth,handleLogOut);
   
   
 

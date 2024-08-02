@@ -3,7 +3,7 @@ const studentLogin = require("../Models/studentLogin");
 const studentSignUp = require("../Models/studentSignup");
 const user = require("../Models/user");
 const sendOtpEmail = require("./mailer");
-const { setStudent,setgoogleStudent } = require("../service/authenticate");
+const { setStudent,setgoogleStudent ,tokenBlacklist} = require("../service/authenticate");
 
 async function handleGetAllusers(req, res) {
   const students = await Student.find({});
@@ -184,6 +184,10 @@ const handleStudneAccount = async (req, res) => {
 const handleLogOut = (req , res) =>{   // for student logout
 
   try {
+    const token = req.header('x-auth-token');
+    if (token) {
+        tokenBlacklist.add(token);
+    }
     req.logout((err) => {
       if (err) {
         return res.status(500).json({ message: 'Logout failed', error: err });
@@ -202,6 +206,34 @@ const handleLogOut = (req , res) =>{   // for student logout
 
 }
 
+const handleStudentUpdate = async(req ,res) =>{
+  try {
+        if(req.user.googleId){
+          const email = req.user.email;
+          const body = req.body;
+     
+          await Student.updateOne({email},{$set:body});
+    
+         return res.status(200).json({message:"Student details are updated sucessfully"});
+            
+        }
+        else{
+          const email = req.user.email;
+          const body = req.body;
+     
+          await Student.updateOne({email},{$set:body});
+         return res.status(200).json({message:"Student details are updated sucessfully"});
+        }
+    
+
+  } catch (error) {
+    return res.status(500).json({error: message.error});
+  }
+     
+};
+
+
+
 module.exports = {
   handleGetAllusers,
   handleRegisterStudent,
@@ -209,5 +241,6 @@ module.exports = {
   handleStudentLogin,
   handleStudneAccount,
   handleLogOut,
+  handleStudentUpdate,
 };
 
