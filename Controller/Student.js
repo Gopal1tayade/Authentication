@@ -211,9 +211,10 @@ const handleStudentUpdate = async(req ,res) =>{
         if(req.user.googleId){
           const email = req.user.email;
           const body = req.body;
+        
      
           await Student.updateOne({email},{$set:body});
-    
+
          return res.status(200).json({message:"Student details are updated sucessfully"});
             
         }
